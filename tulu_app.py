@@ -115,7 +115,6 @@ if option == "📤 Upload Image":
                                 f"Predicted Kannada Character: <b>{kannada_char}</b><br>"
                                 f"Confidence: <b>{confidence*100:.2f}%</b></div>", unsafe_allow_html=True)
 
-
     # -------- Draw Character --------
     elif option == "✍ Draw Character":
         st.write("🎨 Draw the character below (white pen on blackboard):")
@@ -169,5 +168,6 @@ if option == "📤 Upload Image":
 
 with col_right:
     st.image("Conjunct_Characters.jpg", caption="📖 Conjunct Characters", use_container_width=True)
+
 
 
