@@ -109,7 +109,7 @@ with col_center:
 
             if st.button("🚀 Predict from Uploaded Image"):
                 # Check if file size is greater than 1 MB at prediction time
-                if uploaded_file.size > 1 * 1024 * 1024:
+                if uploaded_file.size > 1 * 1024:
                     st.error("❌ Invalid image. No character found!")
                 else:
                     kannada_char, confidence = predict_character(img, selected_model)
@@ -174,6 +174,7 @@ with col_center:
 
 with col_right:
     st.image("Conjunct_Characters.jpg", caption="📖 Conjunct Characters", use_container_width=True)
+
 
 
 
