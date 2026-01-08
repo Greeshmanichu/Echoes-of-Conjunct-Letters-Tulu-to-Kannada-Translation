@@ -95,12 +95,12 @@ with col_center:
 
     option = st.radio("✏ Input Method:", ["📤 Upload Image", "✍ Draw Character", "🌐 Image Link"])
 
-    # -------- Upload Image --------
+   # -------- Upload Image --------
 if option == "📤 Upload Image":
     uploaded_file = st.file_uploader("Upload a character image", type=["png", "jpg", "jpeg"])
     if uploaded_file is not None:
-        # Check if file size is greater than 1 KB
-        if uploaded_file.size > 1024:  # 1 KB = 1024 bytes
+        # Check if file size is greater than 1 MB
+        if uploaded_file.size > 1 * 1024 * 1024:  # 1 MB = 1024*1024 bytes
             st.error("❌ Invalid image or no character found — image is too large.")
         else:
             file_bytes = np.asarray(bytearray(uploaded_file.read()), dtype=np.uint8)
@@ -169,4 +169,5 @@ if option == "📤 Upload Image":
 
 with col_right:
     st.image("Conjunct_Characters.jpg", caption="📖 Conjunct Characters", use_container_width=True)
+
 
