@@ -95,25 +95,31 @@ with col_center:
 
     option = st.radio("✏ Input Method:", ["📤 Upload Image", "✍ Draw Character", "🌐 Image Link"])
 
-   # -------- Upload Image --------
-if option == "📤 Upload Image":
-    uploaded_file = st.file_uploader("Upload a character image", type=["png", "jpg", "jpeg"])
-    if uploaded_file is not None:
-        # Check if file size is greater than 1 MB
-        if uploaded_file.size > 1 * 1024 * 1024:  # 1 MB = 1024*1024 bytes
-            st.error("❌ Invalid image or no character found — image is too large.")
-        else:
+    # -------- Upload Image --------
+    if option == "📤 Upload Image":
+        uploaded_file = st.file_uploader("Upload a character image", type=["png", "jpg", "jpeg"])
+        img = None
+        if uploaded_file is not None:
+            # Read the file into bytes
             file_bytes = np.asarray(bytearray(uploaded_file.read()), dtype=np.uint8)
             img = cv2.imdecode(file_bytes, cv2.IMREAD_GRAYSCALE)
+            
+            # Display the uploaded image regardless of size
             st.image(img, caption="Uploaded Image", use_container_width=True, channels="GRAY")
+
             if st.button("🚀 Predict from Uploaded Image"):
-                kannada_char, confidence = predict_character(img, selected_model)
-                if kannada_char is None:
-                    st.error("❌ Invalid input image — please upload a valid handwritten Tulu character.")
+                # Check if file size is greater than 1 MB at prediction time
+                if uploaded_file.size > 1 * 1024 * 1024:
+                    st.error("❌ Invalid image or no character found — image is too large.")
                 else:
-                    st.markdown(f"<div class='prediction-box'>Model: <b>{selected_model_name}</b><br>"
-                                f"Predicted Kannada Character: <b>{kannada_char}</b><br>"
-                                f"Confidence: <b>{confidence*100:.2f}%</b></div>", unsafe_allow_html=True)
+                    kannada_char, confidence = predict_character(img, selected_model)
+                    if kannada_char is None:
+                        st.error("❌ Invalid input image — please upload a valid handwritten Tulu character.")
+                    else:
+                        st.markdown(f"<div class='prediction-box'>Model: <b>{selected_model_name}</b><br>"
+                                    f"Predicted Kannada Character: <b>{kannada_char}</b><br>"
+                                    f"Confidence: <b>{confidence*100:.2f}%</b></div>", unsafe_allow_html=True)
+
 
     # -------- Draw Character --------
     elif option == "✍ Draw Character":
@@ -168,6 +174,7 @@ if option == "📤 Upload Image":
 
 with col_right:
     st.image("Conjunct_Characters.jpg", caption="📖 Conjunct Characters", use_container_width=True)
+
 
 
 
