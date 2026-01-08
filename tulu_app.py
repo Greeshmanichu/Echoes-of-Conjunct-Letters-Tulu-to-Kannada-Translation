@@ -96,9 +96,13 @@ with col_center:
     option = st.radio("✏ Input Method:", ["📤 Upload Image", "✍ Draw Character", "🌐 Image Link"])
 
     # -------- Upload Image --------
-    if option == "📤 Upload Image":
-        uploaded_file = st.file_uploader("Upload a character image", type=["png", "jpg", "jpeg"])
-        if uploaded_file is not None:
+if option == "📤 Upload Image":
+    uploaded_file = st.file_uploader("Upload a character image", type=["png", "jpg", "jpeg"])
+    if uploaded_file is not None:
+        # Check if file size is greater than 1 KB
+        if uploaded_file.size > 1024:  # 1 KB = 1024 bytes
+            st.error("❌ Invalid image or no character found — image is too large.")
+        else:
             file_bytes = np.asarray(bytearray(uploaded_file.read()), dtype=np.uint8)
             img = cv2.imdecode(file_bytes, cv2.IMREAD_GRAYSCALE)
             st.image(img, caption="Uploaded Image", use_container_width=True, channels="GRAY")
@@ -110,6 +114,7 @@ with col_center:
                     st.markdown(f"<div class='prediction-box'>Model: <b>{selected_model_name}</b><br>"
                                 f"Predicted Kannada Character: <b>{kannada_char}</b><br>"
                                 f"Confidence: <b>{confidence*100:.2f}%</b></div>", unsafe_allow_html=True)
+
 
     # -------- Draw Character --------
     elif option == "✍ Draw Character":
@@ -164,3 +169,4 @@ with col_center:
 
 with col_right:
     st.image("Conjunct_Characters.jpg", caption="📖 Conjunct Characters", use_container_width=True)
+
