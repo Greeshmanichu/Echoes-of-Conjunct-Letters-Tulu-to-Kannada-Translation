@@ -80,12 +80,12 @@ def is_valid_character_image(gray_img):
     total_pixels = thresh.size
     ink_ratio = white_pixels / total_pixels
 
-    # 🚫 Too little ink → blank / line / noise
-    if ink_ratio < 0.02:
+    # Too little ink → blank / noise
+    if ink_ratio < 0.002:  # 0.2% ink allowed
         return False, "❌ Error: Too little drawing detected"
 
-    # 🚫 Too much ink → random image / photo
-    if ink_ratio > 0.65:
+    # Too much ink → probably a photo
+    if ink_ratio > 0.9:  # allow more filled strokes
         return False, "❌ Invalid image: Not a character"
 
     # Find contours
@@ -99,8 +99,8 @@ def is_valid_character_image(gray_img):
     # Largest contour area
     max_area = max(cv2.contourArea(cnt) for cnt in contours)
 
-    # 🚫 Very small contour → line / dot
-    if max_area < 150:
+    # Very small contour → line / dot
+    if max_area < 20:  # lowered threshold for thin handwritten strokes
         return False, "❌ Error: Drawing is too simple"
 
     return True, ""
@@ -231,3 +231,4 @@ with col_center:
 
 with col_right:
     st.image("Conjunct_Characters.jpg", caption="📖 Conjunct Characters", use_container_width=True)
+
