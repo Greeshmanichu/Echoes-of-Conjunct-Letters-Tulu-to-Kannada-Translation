@@ -58,15 +58,74 @@ def preprocess_image_array(img_array, img_size=(50, 50)):
     img_array = np.expand_dims(img_array, axis=0)
     return img_array
 
+# ---------------- Validation Function ----------------
+def is_valid_character_image(gray_img):
+    """
+    Returns (True, "") if valid
+    Returns (False, reason) if invalid
+    """
+
+    # Resize for consistency
+    img = cv2.resize(gray_img, (50, 50))
+
+    # Binary threshold
+    _, thresh = cv2.threshold(img, 0, 255,
+                               cv2.THRESH_BINARY + cv2.THRESH_OTSU)
+
+    # Invert so character = white
+    thresh = cv2.bitwise_not(thresh)
+
+    # Count white pixels (ink)
+    white_pixels = np.sum(thresh == 255)
+    total_pixels = thresh.size
+    ink_ratio = white_pixels / total_pixels
+
+    # 🚫 Too little ink → blank / line / noise
+    if ink_ratio < 0.02:
+        return False, "❌ Error: Too little drawing detected"
+
+    # 🚫 Too much ink → random image / photo
+    if ink_ratio > 0.65:
+        return False, "❌ Invalid image: Not a character"
+
+    # Find contours
+    contours, _ = cv2.findContours(
+        thresh, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE
+    )
+
+    if len(contours) == 0:
+        return False, "❌ No character detected"
+
+    # Largest contour area
+    max_area = max(cv2.contourArea(cnt) for cnt in contours)
+
+    # 🚫 Very small contour → line / dot
+    if max_area < 150:
+        return False, "❌ Error: Drawing is too simple"
+
+    return True, ""
+
 # ---------------- Prediction Function ----------------
 def predict_character(image_array, model):
+    valid, reason = is_valid_character_image(image_array)
+
+    if not valid:
+        return None, None, reason
+
     img = preprocess_image_array(image_array)
     preds = model.predict(img, verbose=0)[0]
+
     pred_index = np.argmax(preds)
+    confidence = preds[pred_index] * 100
+
+    # 🚫 Low confidence → reject
+    if confidence < 40:
+        return None, None, "❌ Invalid character image"
+
     predicted_folder = class_labels[pred_index]
     kannada_char = character_mapping[predicted_folder]
-    confidence = preds[pred_index] * 100
-    return kannada_char, confidence
+
+    return kannada_char, confidence, ""
 
 # ---------------- Streamlit UI ----------------
 st.set_page_config(layout="wide")
@@ -101,10 +160,13 @@ with col_center:
             img = cv2.imdecode(file_bytes, cv2.IMREAD_GRAYSCALE)
             st.image(img, caption="Uploaded Image", use_container_width=True, channels="GRAY")
             if st.button("🚀 Predict from Uploaded Image"):
-                kannada_char, confidence = predict_character(img, selected_model)
-                st.markdown(f"<div class='prediction-box'>Model: <b>{selected_model_name}</b><br>"
-                            f"Predicted Kannada Character: <b>{kannada_char}</b><br>"
-                            f"Confidence: <b>{confidence:.2f}%</b></div>", unsafe_allow_html=True)
+                kannada_char, confidence, error = predict_character(img, selected_model)
+                if error:
+                    st.error(error)
+                else:
+                    st.markdown(f"<div class='prediction-box'>Model: <b>{selected_model_name}</b><br>"
+                                f"Predicted Kannada Character: <b>{kannada_char}</b><br>"
+                                f"Confidence: <b>{confidence:.2f}%</b></div>", unsafe_allow_html=True)
 
     # -------- Draw Character --------
     elif option == "✍ Draw Character":
@@ -123,17 +185,24 @@ with col_center:
             img = cv2.cvtColor(canvas_result.image_data.astype("uint8"), cv2.COLOR_RGBA2GRAY)
             st.image(img, caption="Drawn Image", use_container_width=True, channels="GRAY")
             if st.button("🚀 Predict from Drawing"):
-                kannada_char, confidence = predict_character(img, selected_model)
-                st.markdown(f"<div class='prediction-box'>Model: <b>{selected_model_name}</b><br>"
-                            f"Predicted Kannada Character: <b>{kannada_char}</b><br>"
-                            f"Confidence: <b>{confidence:.2f}%</b></div>", unsafe_allow_html=True)
+                kannada_char, confidence, error = predict_character(img, selected_model)
+                if error:
+                    st.error(error)
+                else:
+                    st.markdown(f"<div class='prediction-box'>Model: <b>{selected_model_name}</b><br>"
+                                f"Predicted Kannada Character: <b>{kannada_char}</b><br>"
+                                f"Confidence: <b>{confidence:.2f}%</b></div>", unsafe_allow_html=True)
 
     # -------- Image URL --------
     elif option == "🌐 Image Link":
         img_url = st.text_input("Enter the image URL:")
         if img_url:
             try:
-                response = requests.get(img_url)
+                response = requests.get(img_url, timeout=5)
+                if "image" not in response.headers.get("Content-Type", ""):
+                    st.error("❌ Invalid link: Not an image URL")
+                    st.stop()
+
                 img = Image.open(BytesIO(response.content)).convert("RGB")
                 img = np.array(img)
 
@@ -149,10 +218,13 @@ with col_center:
                 st.image(inverted, caption="Inverted Image from URL", use_container_width=True, channels="GRAY")
 
                 if st.button("🚀 Predict from URL Image"):
-                    kannada_char, confidence = predict_character(inverted, selected_model)
-                    st.markdown(f"<div class='prediction-box'>Model: <b>{selected_model_name}</b><br>"
-                                f"Predicted Kannada Character: <b>{kannada_char}</b><br>"
-                                f"Confidence: <b>{confidence:.2f}%</b></div>", unsafe_allow_html=True)
+                    kannada_char, confidence, error = predict_character(inverted, selected_model)
+                    if error:
+                        st.error(error)
+                    else:
+                        st.markdown(f"<div class='prediction-box'>Model: <b>{selected_model_name}</b><br>"
+                                    f"Predicted Kannada Character: <b>{kannada_char}</b><br>"
+                                    f"Confidence: <b>{confidence:.2f}%</b></div>", unsafe_allow_html=True)
 
             except Exception as e:
                 st.error(f"⚠ Could not process image from URL. Error: {e}")
